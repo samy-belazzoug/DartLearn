@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:http/http.dart' as http;
 
 const version = '0.0.1';
 void main(List<String> arguments) {
@@ -8,14 +9,13 @@ void main(List<String> arguments) {
     else if (arguments.first == 'version') {
         print('Dartpedia CLI version $version');
     }
-    else if (arguments.first == 'search') {
-      if (arguments.length > 1) {
-          searchWikipedia(arguments.sublist(1));
-      } 
-      else {
-        searchWikipedia(arguments);
-      }
-        
+    else if (arguments.first == 'wikipedia') {
+        if (arguments.isEmpty == false) {
+            searchWikipedia(arguments.sublist(1));
+        } 
+        else {
+            searchWikipedia(arguments);
+        }
     }
     else {
         printUsage();
@@ -28,18 +28,37 @@ void main(List<String> arguments) {
       );
 }
 
-void searchWikipedia(List<String> arguments) {
+void searchWikipedia(List<String> arguments) async {
     final String articleTitle;
-    if (arguments.length <= 1 || arguments.isEmpty) {
-        print('ItS null, Please provide an article title :');
-        articleTitle = stdin.readLineSync() ?? ' ';
+    if (arguments.isEmpty) {
+        print('Please provide an article title :');
+        final userInput = stdin.readLineSync();
+        if (userInput == null || userInput.isEmpty) {
+          print('No inputs existed. Exiting.');
+          return;
+        }
+        articleTitle = userInput;
     }
     else {
-        print('its not null');
         articleTitle = arguments.join(' ');
     }
 
     print('Searching for articles about "$articleTitle"... please wait.');
-    print("That's it!");
-    print("(Pretend this is an article about $articleTitle so I look professionnal..)");
+
+    var articleContent = await getWikipediaArticle(articleTitle);
+    print(articleContent);    
+}
+
+Future<String> getWikipediaArticle(String articleTitle) async {
+  final url = Uri.https(
+    'en.wikipedia.org',
+    '/api/rest_v1/page/summary/$articleTitle',
+  );
+  final response = await http.get(url);
+  if (response.statusCode == 200) {
+      return response.body;
+  }
+  else {
+    return 'Error: Failed to fetch article "$articleTitle". Status code: ${response.statusCode}';
+  }
 }
