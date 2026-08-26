@@ -1,8 +1,8 @@
-import 'dart:async'; // Add this line
+import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 import 'arguments.dart';
-import 'exceptions.dart'; // Add this line
+import 'exceptions.dart';
 
 class CommandRunner { // Runs the command line application logic with the given arguments
     
@@ -38,50 +38,52 @@ class CommandRunner { // Runs the command line application logic with the given 
       command.runner = this;
   }
 
-  ArgResults parse(List<String> input) {
-    var results = ArgResults();
-    
-    if (input.isEmpty) return results;
 
-    // Throw an exception if the command is not recognized.
-    if (_commands.containsKey(input.first)) {
-      results.command = _commands[input.first];
-      input.sublist(1);
-    }
-    else {
-      throw ArgumentException(
-        'The first word of input must be a command.',
-      null,
-      input.first);
-    };
+ArgResults parse(List<String> input) {
+  ArgResults results = ArgResults();
+  if (input.isEmpty) return results;
 
-    // Throw an exception if multiple commands are provided.
-    if (results.command != null && input.isNotEmpty && _commands.containsKey(input.first)) {
-      throw ArgumentException(
-        'Input can only contain one command. Got ${input.first} and ${results.command!.name}',
+  // Throw an exception if the command is not recognized.
+  if (_commands.containsKey(input.first)) {
+    results.command = _commands[input.first];
+    input = input.sublist(1);
+  } else {
+    throw ArgumentException(
+      'The first word of input must be a command.',
       null,
       input.first,
-      );
-    }
+    );
+  }
 
-    // Section: Handle options, including flags.
-    Map<Option, Object?> inputOptions = {};
-    int i = 0;
-    while (i < input.length) {
-        if (input[i].startsWith('-')) {
-            var base = _removeDash(input[i]);
-            // Throw an exception if an option is not recognized for the given command.
-            var option = results.command!.option.firstWhere(
-                (option) => option.name == base || option.abbr == base,
-                orElse: () {
-                    throw ArgumentException(
-                    'Unknown option ${input[i]}',
-                    results.command!.name,
-                    input[i],
-                    );
-                },
-            );
-      
+  // Throw an exception if multiple commands are provided.
+  if (results.command != null &&
+      input.isNotEmpty &&
+      _commands.containsKey(input.first)) {
+    throw ArgumentException(
+      'Input can only contain one command. Got ${input.first} and ${results.command!.name}',
+      null,
+      input.first,
+    );
+  }
+
+  // Section: Handle options, including flags.
+  Map<Option, Object?> inputOptions = {};
+  int i = 0;
+  while (i < input.length) {
+    if (input[i].startsWith('-')) {
+      var base = _removeDash(input[i]);
+      // Throw an exception if an option is not recognized for the given command.
+      var option = results.command!.options.firstWhere(
+        (option) => option.name == base || option.abbr == base,
+        orElse: () {
+          throw ArgumentException(
+            'Unknown option ${input[i]}',
+            results.command!.name,
+            input[i],
+          );
+        },
+      );
+
       if (option.type == OptionType.flag) {
         inputOptions[option] = true;
         i++;
@@ -108,8 +110,7 @@ class CommandRunner { // Runs the command line application logic with the given 
         inputOptions[option] = arg;
         i++;
       }
-
-      } else {
+    } else {
       // Throw an exception if more than one positional argument is provided.
       if (results.commandArg != null && results.commandArg!.isNotEmpty) {
         throw ArgumentException(
@@ -120,12 +121,12 @@ class CommandRunner { // Runs the command line application logic with the given 
       }
       results.commandArg = input[i];
     }
-      i++;
-    }
-
-    results.command = _commands[input.first];
-    return results;
+    i++;
   }
+  results.options = inputOptions;
+
+  return results;
+}
 
 String _removeDash(String input) {
   if (input.startsWith('--')) {
